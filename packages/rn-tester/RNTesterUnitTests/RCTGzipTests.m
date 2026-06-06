@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// [macOS] RCTIsGzippedData is not linked into the macOS unit-test target.
+// Exclude this iOS-oriented suite from macOS until it is ported.
+#if !TARGET_OS_OSX
+
 #import <XCTest/XCTest.h>
 
 #import <RCTTest/RCTTestRunner.h>
@@ -77,3 +81,5 @@ extern BOOL RCTIsGzippedData(NSData *data);
 }
 
 @end
+
+#endif // !TARGET_OS_OSX [macOS]

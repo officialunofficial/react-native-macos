@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// [macOS] This suite exercises iOS-only UIImage APIs; macOS uses NSImage.
+// Exclude it from the macOS unit-test target until it is ported.
+#if !TARGET_OS_OSX
+
 #import <XCTest/XCTest.h>
 
 #import <React/RCTBridge.h>
@@ -231,3 +235,5 @@ RCTDefineImageURLLoader(RCTImageLoaderTestsURLLoader1) RCTDefineImageURLLoader(R
 }
 
 @end
+
+#endif // !TARGET_OS_OSX [macOS]
