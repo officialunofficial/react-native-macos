@@ -311,16 +311,21 @@
   return ((RCTUITextFieldCell*)self.cell).font;
 }
 
+// Derive the focus-ring type from enableFocusRing on every query so that an
+// AppKit redraw/re-mount that resets focusRingType cannot re-enable the ring
+// when it has been disabled from JS. (#2954)
+- (NSFocusRingType)focusRingType
+{
+  return _enableFocusRing ? NSFocusRingTypeExterior : NSFocusRingTypeNone;
+}
+
 - (void)setEnableFocusRing:(BOOL)enableFocusRing {
   if (_enableFocusRing != enableFocusRing) {
     _enableFocusRing = enableFocusRing;
   }
 
-  if (enableFocusRing) {
-    [self setFocusRingType:NSFocusRingTypeDefault];
-  } else {
-    [self setFocusRingType:NSFocusRingTypeNone];
-  }
+  [super setFocusRingType:self.focusRingType];
+  [self setKeyboardFocusRingNeedsDisplayInRect:self.bounds];
 }
 
 #endif // macOS]

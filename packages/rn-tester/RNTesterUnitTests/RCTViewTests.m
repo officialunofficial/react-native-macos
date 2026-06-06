@@ -16,6 +16,7 @@
 
 #if TARGET_OS_OSX // [macOS]
 #import <AppKit/AppKit.h>
+#import <React/RCTUITextField.h>
 #import <React/RCTUITextView.h>
 #endif // [macOS]
 
@@ -85,6 +86,38 @@ static UIEdgeInsets RCTContentInsetsMock(RCTUIView *view) // [macOS]
       textView.focusRingType,
       NSFocusRingTypeDefault,
       @"focusRingType must be Default when enableFocusRing is YES (#2955)");
+}
+
+// Regression tests for https://github.com/microsoft/react-native-macos/issues/2954
+// Single-line TextField is backed by RCTUITextField. With enableFocusRing=false
+// the focus ring must stay hidden even after AppKit resets focusRingType on a
+// later redraw/re-mount. The setter-only approach loses the setting; overriding
+// the focusRingType getter (derived from enableFocusRing) makes it durable.
+- (void)testSingleLineTextFieldKeepsFocusRingHiddenAfterRedraw
+{
+  RCTUITextField *textField = [[RCTUITextField alloc] initWithFrame:NSZeroRect];
+  textField.enableFocusRing = NO;
+  XCTAssertEqual(
+      textField.focusRingType,
+      NSFocusRingTypeNone,
+      @"focusRingType must be None when enableFocusRing is NO (#2954)");
+
+  // Simulate AppKit / an internal control re-enabling the ring on redraw.
+  [textField setFocusRingType:NSFocusRingTypeExterior];
+  XCTAssertEqual(
+      textField.focusRingType,
+      NSFocusRingTypeNone,
+      @"focusRingType must remain None after a redraw tries to re-enable it (#2954)");
+}
+
+- (void)testSingleLineTextFieldShowsFocusRingWhenEnabled
+{
+  RCTUITextField *textField = [[RCTUITextField alloc] initWithFrame:NSZeroRect];
+  textField.enableFocusRing = YES;
+  XCTAssertNotEqual(
+      textField.focusRingType,
+      NSFocusRingTypeNone,
+      @"focusRingType must not be None when enableFocusRing is YES (#2954)");
 }
 #endif // [macOS]
 
