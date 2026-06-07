@@ -292,6 +292,7 @@ static NSString *const kRCTLegacyInteropChildIndexKey = @"index";
   [_adapter handleCommand:(NSString *)commandName args:(NSArray *)args];
 }
 
+#if !TARGET_OS_OSX // [macOS] iOS-only hit-testing override (UIView/UIEvent)
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {
   UIView *result = [super hitTest:point withEvent:event];
@@ -302,5 +303,6 @@ static NSString *const kRCTLegacyInteropChildIndexKey = @"index";
 
   return result;
 }
+#endif // [macOS]
 
 @end

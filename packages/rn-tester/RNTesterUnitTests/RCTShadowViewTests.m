@@ -6,6 +6,5 @@
  */
 
 // [macOS] Upstream react-native 0.84 removed this legacy-architecture test
-// suite (it referenced bridge APIs deleted under the New Architecture). The
-// fork's RNTesterPods project still references the file, so this empty stub
-// keeps the build input present without resurrecting legacy tests.
+// suite. The fork's RNTesterPods project still references the file, so this
+// empty stub keeps the build input present without resurrecting legacy tests.
