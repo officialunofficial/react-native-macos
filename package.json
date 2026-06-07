@@ -142,9 +142,8 @@
     "minimatch@npm:>=5.0.0 <6.0.0": "npm:5.1.9",
     "minimatch@npm:9.0.3": "npm:9.0.9",
     "minimatch@npm:>=9.0.0 <10.0.0": "npm:9.0.9",
-    "react-is": "19.2.3",
-    "on-headers": "1.1.0",
     "react-is": "19.2.0",
+    "on-headers": "1.1.0",
     "readable-stream": "^4.0.0 <4.4.2",
     "shell-quote": "^1.7.3",
     "tough-cookie": "^4.1.3"
