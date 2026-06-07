@@ -5,10 +5,6 @@ inputs:
     description: 'The xcode version to use'
     required: false
     default: '16.4.0'
-  platform:
-    description: 'The platform to use. Valid values are: ios, ios-simulator, macos, mac-catalyst, tvos, tvos-simulator, xros, xros-simulator'
-    required: false
-    default: 'macos'
 runs:
   using: "composite"
   steps:

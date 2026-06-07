@@ -119,6 +119,7 @@ if (project.findProperty("react.internal.useHermesStable")?.toString()?.toBoolea
       File("./packages/react-native/sdks/hermes-engine/version.properties")
   hermesVersionPropertiesFile.inputStream().use { hermesVersions.load(it) }
   val selectedHermesVersion = hermesVersions["HERMES_V1_VERSION_NAME"] as String
+
   hermesSubstitution = selectedHermesVersion to "Users opted to use stable hermes release"
 } else if (
     project.findProperty("react.internal.useHermesNightly")?.toString()?.toBoolean() == true
