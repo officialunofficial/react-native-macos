@@ -16,10 +16,6 @@ import type {
   GestureResponderEvent,
   LayoutChangeEvent,
 } from '../../Types/CoreEventTypes';
-// [macOS
-import type {DragEvent, MouseEvent} from '../../Types/CoreEventTypes';
-// macOS]
-import type {DraggedTypesType} from '../View/DraggedType'; // [macOS]
 
 import View from '../../Components/View/View';
 import {type AccessibilityProps} from '../../Components/View/ViewAccessibility';
@@ -29,19 +25,7 @@ import {type ViewStyleProp} from '../../StyleSheet/StyleSheet';
 import * as React from 'react';
 import {cloneElement, useMemo} from 'react';
 
-export type TouchableWithoutFeedbackPropsIOS = {
-  // [macOS
-  acceptsFirstMouse?: ?boolean,
-  enableFocusRing?: ?boolean,
-  tooltip?: ?string,
-  onMouseEnter?: (event: MouseEvent) => void,
-  onMouseLeave?: (event: MouseEvent) => void,
-  onDragEnter?: (event: DragEvent) => void,
-  onDragLeave?: (event: DragEvent) => void,
-  onDrop?: (event: DragEvent) => void,
-  draggedTypes?: ?DraggedTypesType,
-  // macOS]
-};
+export type TouchableWithoutFeedbackPropsIOS = {};
 
 export type TouchableWithoutFeedbackPropsAndroid = {
   /**
@@ -95,32 +79,32 @@ export type TouchableWithoutFeedbackProps = $ReadOnly<
       | 'no-hide-descendants'
     ),
     nativeID?: ?string,
-    onAccessibilityAction?: ?(event: AccessibilityActionEvent) => mixed,
+    onAccessibilityAction?: ?(event: AccessibilityActionEvent) => unknown,
     /**
      * When `accessible` is true (which is the default) this may be called when
      * the OS-specific concept of "blur" occurs, meaning the element lost focus.
      * Some platforms may not have the concept of blur.
      */
-    onBlur?: ?(event: BlurEvent) => void, // [macOS]
+    onBlur?: ?(event: BlurEvent) => unknown,
     /**
      * When `accessible` is true (which is the default) this may be called when
      * the OS-specific concept of "focus" occurs. Some platforms may not have
      * the concept of focus.
      */
-    onFocus?: ?(event: FocusEvent) => void, // [macOS]
+    onFocus?: ?(event: FocusEvent) => unknown,
     /**
      * Invoked on mount and layout changes with
      * {nativeEvent: {layout: {x, y, width, height}}}
      */
-    onLayout?: ?(event: LayoutChangeEvent) => mixed,
-    onLongPress?: ?(event: GestureResponderEvent) => mixed,
+    onLayout?: ?(event: LayoutChangeEvent) => unknown,
+    onLongPress?: ?(event: GestureResponderEvent) => unknown,
     /**
      * Called when the touch is released,
      * but not if cancelled (e.g. by a scroll that steals the responder lock).
      */
-    onPress?: ?(event: GestureResponderEvent) => mixed,
-    onPressIn?: ?(event: GestureResponderEvent) => mixed,
-    onPressOut?: ?(event: GestureResponderEvent) => mixed,
+    onPress?: ?(event: GestureResponderEvent) => unknown,
+    onPressIn?: ?(event: GestureResponderEvent) => unknown,
+    onPressOut?: ?(event: GestureResponderEvent) => unknown,
     /**
      * When the scroll view is disabled, this defines how far your
      * touch may move off of the button, before deactivating the button.
@@ -167,15 +151,6 @@ const PASSTHROUGH_PROPS = [
   'onBlur',
   'onFocus',
   'onLayout',
-  // [macOS
-  'onMouseEnter',
-  'onMouseLeave',
-  'onDragEnter',
-  'onDragLeave',
-  'onDrop',
-  'draggedTypes',
-  'tooltip',
-  // macOS]
   'testID',
 ] as const;
 
@@ -275,7 +250,7 @@ export default function TouchableWithoutFeedback(
   // adopting `Pressability`, so preserve that behavior.
   const {onBlur, onFocus, ...eventHandlersWithoutBlurAndFocus} = eventHandlers;
 
-  const elementProps: {[string]: mixed, ...} = {
+  const elementProps: {[string]: unknown, ...} = {
     ...eventHandlersWithoutBlurAndFocus,
     accessible: props.accessible !== false,
     accessibilityState:
@@ -289,16 +264,6 @@ export default function TouchableWithoutFeedback(
       props.focusable !== false &&
       props.onPress !== undefined &&
       !props.disabled,
-    // [macOS
-    acceptsFirstMouse:
-      props.acceptsFirstMouse !== false &&
-      props.onPress !== undefined &&
-      !props.disabled,
-    enableFocusRing:
-      props.enableFocusRing !== false &&
-      props.onPress !== undefined &&
-      !props.disabled,
-    // macOS]
 
     accessibilityElementsHidden:
       props['aria-hidden'] ?? props.accessibilityElementsHidden,

@@ -39,7 +39,7 @@ jobs:
     if: github.repository == 'facebook/react-native'
     needs: [set_release_type]
     container:
-      image: reactnativecommunity/react-native-android:latest
+      image: reactnativecommunity/react-native-android:v20.0
       env:
         TERM: "dumb"
         GRADLE_OPTS: "-Dorg.gradle.daemon=false"
@@ -49,7 +49,7 @@ jobs:
         ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build Android
         uses: ./.github/actions/build-android
         with:
@@ -66,7 +66,7 @@ jobs:
         prebuild_react_native_core,
       ]
     container:
-      image: reactnativecommunity/react-native-android:latest
+      image: reactnativecommunity/react-native-android:v20.0
       env:
         TERM: "dumb"
         GRADLE_OPTS: "-Dorg.gradle.daemon=false"
@@ -80,7 +80,7 @@ jobs:
       ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build and Publish NPM Package
         uses: ./.github/actions/build-npm-package
         with:

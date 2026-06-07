@@ -1,6 +1,6 @@
 {
   "name": "@react-native/tester",
-  "version": "0.83.0-main",
+  "version": "0.84.1",
   "private": true,
   "description": "React Native tester app.",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "nullthrows": "^1.1.1"
   },
   "peerDependencies": {
-    "react": "19.2.0",
+    "react": "19.2.3",
     "react-native-macos": "workspace:*"
   },
   "codegenConfig": {

@@ -8,8 +8,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
+          token: ${{ secrets.REACT_NATIVE_BOT_GITHUB_TOKEN }}
           fetch-depth: 0
           fetch-tags: true
       - name: Install dependencies
@@ -36,8 +37,9 @@ jobs:
       - name: Bump podfile.lock
         run: |
           cd packages/rn-tester
+          rm Podfile.lock
           bundle install
-          bundle exec pod update hermes-engine --no-repo-update
+          bundle exec pod install
       - name: Commit changes
         run: |
           git add packages/rn-tester/Podfile.lock

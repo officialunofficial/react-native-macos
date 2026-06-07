@@ -199,21 +199,20 @@ let reactCxxReact = RNTarget(
   searchPaths: [CallInvokerPath],
   excludedPaths: ["tests"],
   dependencies: [.reactNativeDependencies, .jsi, .reactPerfLogger, .logger, .reactDebug, .reactJsInspector]
-
-)
-
-/// React-jsiexecutor.podspec
-let reactJsiExecutor = RNTarget(
-  name: .reactJsiExecutor,
-  path: "ReactCommon/jsiexecutor",
-  dependencies: [.reactNativeDependencies, .jsi, .reactPerfLogger, .reactCxxReact, .reactJsInspector]
 )
 
 /// React-jsitooling.podspec
 let reactJsiTooling = RNTarget(
   name: .reactJsiTooling,
   path: "ReactCommon/jsitooling",
-  dependencies: [.reactNativeDependencies, .reactJsInspector, .reactJsInspectorTracing, .reactCxxReact, .jsi, .reactRuntimeExecutor]
+  dependencies: [.reactNativeDependencies, .jsi, .reactJsInspector, .reactJsInspectorTracing, .reactCxxReact]
+)
+
+/// React-jsiexecutor.podspec
+let reactJsiExecutor = RNTarget(
+  name: .reactJsiExecutor,
+  path: "ReactCommon/jsiexecutor",
+  dependencies: [.reactNativeDependencies, .jsi, .reactCxxReact, .reactJsiTooling]
 )
 
 /// React-hermes.podspec
@@ -320,7 +319,7 @@ let reactTurboModuleCore = RNTarget(
 let reactTurboModuleCoreDefaults = RNTarget(
   name: .reactTurboModuleCoreDefaults,
   path: "ReactCommon/react/nativemodule/defaults",
-  dependencies: [.reactNativeDependencies, .jsi, .reactJsiExecutor, .reactTurboModuleCore]
+  dependencies: [.reactNativeDependencies, .jsi, .reactJsiExecutor, .reactTurboModuleCore, .reactFabric]
 )
 
 /// React-microtasknativemodule.podspec
@@ -342,6 +341,13 @@ let reactWebPerformanceNativeModule = RNTarget(
   name: .reactWebPerformanceNativeModule,
   path: "ReactCommon/react/nativemodule/webperformance",
   dependencies: [.reactNativeDependencies, .reactCxxReact, .reactTurboModuleCore, .reactPerformanceTimeline]
+)
+
+/// React-intersectionobservernativemodule.podspec
+let reactIntersectionObserverNativeModule = RNTarget(
+  name: .reactIntersectionObserverNativeModule,
+  path: "ReactCommon/react/nativemodule/intersectionobserver",
+  dependencies: [.reactNativeDependencies, .reactCxxReact, .reactFabric, .reactTurboModuleBridging, .reactTurboModuleCore, .reactGraphics, .reactGraphicsApple, .reactRuntimeScheduler, .yoga]
 )
 
 /// React-featureflagnativemodule.podspec
@@ -466,7 +472,7 @@ let reactFabric = RNTarget(
     "components/root/tests",
   ] + reactFabricViewPlatformExcludes, // [macOS]
   dependencies: [.reactNativeDependencies, .reactJsiExecutor, .rctTypesafety, .reactTurboModuleCore, .jsi, .logger, .reactDebug, .reactFeatureFlags, .reactUtils, .reactRuntimeScheduler, .reactCxxReact, .reactRendererDebug, .reactGraphics, .yoga],
-  sources: ["animations", "attributedstring", "core", "componentregistry", "componentregistry/native", "components/root", "components/view", "components/scrollview", "components/scrollview/platform/cxx", "components/legacyviewmanagerinterop", "dom", "scheduler", "mounting", "observers/events", "telemetry", "consistency", "leakchecker", "uimanager", "uimanager/consistency"] + reactFabricViewPlatformSources // [macOS]
+  sources: ["animations", "attributedstring", "core", "componentregistry", "componentregistry/native", "components/root", "components/view", "components/view/platform/cxx", "components/scrollview", "components/scrollview/platform/cxx", "components/legacyviewmanagerinterop", "dom", "scheduler", "mounting", "observers/events", "observers/intersection", "telemetry", "consistency", "leakchecker", "uimanager", "uimanager/consistency"] + reactFabricViewPlatformSources // [macOS]
 )
 
 let reactFabricInputAccessory = RNTarget(
@@ -601,7 +607,11 @@ let reactRCTBlob = RNTarget(
 let reactRCTNetwork = RNTarget(
   name: .reactRCTNetwork,
   path: "Libraries/Network",
-  dependencies: [.yoga, .jsi, .reactTurboModuleCore]
+  dependencies: [.yoga, .jsi, .reactTurboModuleCore],
+  defines: [
+    CXXSetting.define("REACT_NATIVE_DEBUGGER_ENABLED", to: "1", .when(configuration: BuildConfiguration.debug)),
+    CXXSetting.define("REACT_NATIVE_DEBUGGER_ENABLED_DEVONLY", to: "1", .when(configuration: BuildConfiguration.debug)),
+  ]
 )
 
 /// React-RCTVibration.podspec
@@ -713,6 +723,7 @@ let targets = [
   reactTurboModuleCoreMicrotasks,
   reactIdleCallbacksNativeModule,
   reactWebPerformanceNativeModule,
+  reactIntersectionObserverNativeModule,
   reactFeatureflagsNativemodule,
   reactNativeModuleDom,
   reactAppDelegate,
@@ -903,6 +914,7 @@ extension String {
   static let reactTurboModuleCoreMicrotasks = "ReactCommon/turbomodule/core/microtasks"
   static let reactIdleCallbacksNativeModule = "React-idlecallbacksnativemodule"
   static let reactWebPerformanceNativeModule = "React-webperformancenativemodule"
+  static let reactIntersectionObserverNativeModule = "React-intersectionobservernativemodule"
   static let reactFeatureflagsNativemodule = "React-featureflagsnativemodule"
   static let reactNativeModuleDom = "React-domnativemodule"
   static let reactAppDelegate = "React-RCTAppDelegate"
@@ -945,6 +957,8 @@ extension Target {
         .define("DEBUG", .when(configuration: .debug)),
         .define("NDEBUG", .when(configuration: .release)),
         .define("USE_HERMES", to: "1"),
+        .define("RCT_REMOVE_LEGACY_ARCH", to: "1"),
+        .define("HERMES_V1_ENABLED", to: "1"),
       ] + defines + cxxCommonHeaderPaths
 
     return .target(
