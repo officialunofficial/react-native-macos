@@ -112,6 +112,7 @@ static NSString *RCTRecursiveAccessibilityLabel(RCTUIView *view) // [macOS]
     NSString *label = subview.accessibilityLabel;
 #else // [macOS
     NSString *label;
+#ifndef RCT_REMOVE_LEGACY_ARCH // [macOS] RCTTextView is legacy-arch only
     if ([subview isKindOfClass:[RCTTextView class]]) {
       // on macOS VoiceOver a text element will always have its accessibilityValue read, but will only read it's accessibilityLabel if it's value is set.
       // the macOS RCTTextView accessibilityValue will return its accessibilityLabel if set otherwise return its text.
@@ -119,6 +120,9 @@ static NSString *RCTRecursiveAccessibilityLabel(RCTUIView *view) // [macOS]
     } else {
       label = subview.accessibilityLabel;
     }
+#else // [macOS] new architecture: RCTTextView is unavailable
+    label = subview.accessibilityLabel;
+#endif // RCT_REMOVE_LEGACY_ARCH
 #endif // macOS]
     if (!label) {
       label = RCTRecursiveAccessibilityLabel(subview);
