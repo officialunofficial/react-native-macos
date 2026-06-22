@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !TARGET_OS_OSX // [macOS] iOS-only RedBox 2.0 / extracted controller (#56640); fork uses inline macOS RCTRedBoxController
+
 #import "RCTRedBox2Controller+Internal.h"
 
 #import <React/RCTDefines.h>
@@ -762,3 +764,5 @@ static const NSTimeInterval kAutoRetryInterval = 20.0;
 @end
 
 #endif
+
+#endif // !TARGET_OS_OSX [macOS]

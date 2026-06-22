@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !TARGET_OS_OSX // [macOS] iOS-only RedBox 2.0 / extracted controller (#56640); fork uses inline macOS RCTRedBoxController
+
 #import <Foundation/Foundation.h>
 
 /**
@@ -44,3 +46,5 @@
                                    isFatal:(BOOL)isFatal;
 
 @end
+
+#endif // !TARGET_OS_OSX [macOS]

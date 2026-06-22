@@ -5,21 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#import <React/RCTUIKit.h> // [macOS]
-
-#import <React/RCTViewComponentView.h>
-#import <React/RCTVirtualViewProtocol.h>
-
-NS_ASSUME_NONNULL_BEGIN
-
-@interface RCTVirtualViewExperimentalComponentView : RCTViewComponentView <RCTVirtualViewProtocol>
-
-+ (instancetype)new NS_UNAVAILABLE;
-- (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithCoder:(NSCoder *)coder NS_UNAVAILABLE;
-
-- (instancetype)initWithFrame:(CGRect)frame NS_DESIGNATED_INITIALIZER;
-
-@end
-
-NS_ASSUME_NONNULL_END
+// [macOS] react-native 0.85 removed the experimental VirtualView component (its
+// C++ descriptor under ReactCommon/.../virtualviewexperimental was deleted). This
+// file is kept only because the fork's RNTesterPods project still references it;
+// empty stub avoids depending on the removed component.

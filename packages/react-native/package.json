@@ -1,6 +1,6 @@
 {
   "name": "react-native-macos",
-  "version": "1000.0.0",
+  "version": "0.85.4",
   "description": "React Native for macOS",
   "license": "MIT",
   "repository": {
@@ -154,7 +154,7 @@
     "scripts/xcode/with-environment.sh",
     "sdks/.hermesversion",
     "sdks/.hermesv1version",
-    "sdks/hermes-engine",
+    "sdks/hermes-engine/**",
     "sdks/hermesc",
     "settings.gradle.kts",
     "src",
@@ -179,10 +179,10 @@
     "react": "^19.2.3"
   },
   "peerDependenciesMeta": {
-    "@types/react": {
+    "@react-native/jest-preset": {
       "optional": true
     },
-    "@react-native/jest-preset": {
+    "@types/react": {
       "optional": true
     }
   },

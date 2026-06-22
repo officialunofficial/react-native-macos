@@ -154,9 +154,11 @@ class RCTAnimationChoreographer : public AnimationChoreographer {
   void resume() override
   {
     if (_animationDisplayLink == nil) {
+#if !TARGET_OS_OSX // [macOS] +[CADisplayLink displayLinkWithTarget:selector:] is unavailable on macOS
       _animationDisplayLink = [CADisplayLink displayLinkWithTarget:_displayLinkTarget
                                                           selector:@selector(displayLinkTick:)];
       [_animationDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+#endif // [macOS]
     }
     [_animationDisplayLink setPaused:NO];
   }

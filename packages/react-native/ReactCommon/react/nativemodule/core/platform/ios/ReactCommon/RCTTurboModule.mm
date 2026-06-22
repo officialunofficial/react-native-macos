@@ -401,7 +401,20 @@ id ObjCTurboModule::performMethodInvocation(
         // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
         throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
       } else {
-        @throw exception;
+        // [macOS] async (Promise) path: same rethrow defect as performVoidMethodInvocation —
+        // `@throw` on the turbomodulemanager queue (no JS frame above) escapes to
+        // std::terminate() -> SIGABRT. Fires when a macOS native module lacks a selector that
+        // its codegen spec declares, e.g. RCTLinkingManager.openURL/canOpenURL/getInitialURL/
+        // openSettings are `#if !TARGET_OS_OSX`-guarded but kept in NativeLinkingManager's spec.
+        // Log (surfacing the exact <class>/<selector>) instead of aborting. The JS Promise
+        // won't settle, but the process survives — far better than a hard crash on a fork still
+        // being ported. Mirrors facebook/react-native#50193 / reactwg new-arch Discussion #276.
+        RCTLogError(
+            @"[TurboModule] async method -[%s %s] threw %@: %@ -- swallowed to avoid SIGABRT on the TurboModule queue.",
+            moduleName,
+            methodNameStr.c_str(),
+            exception.name,
+            exception.reason);
       }
     } @finally {
       [retainedObjectsForInvocation removeAllObjects];
@@ -461,9 +474,21 @@ void ObjCTurboModule::performVoidMethodInvocation(
     @try {
       [inv invokeWithTarget:strongModule];
     } @catch (NSException *exception) {
-      // Void methods are always async, re-throw instead of converting to
-      // JSError, same as the async branch in performMethodInvocation.
-      @throw exception;
+      // [macOS] Void methods run async on the TurboModule queue with no JS frame
+      // above to catch a rethrow, so `@throw` here escapes to std::terminate() ->
+      // SIGABRT. This fires e.g. when a macOS native module backing a
+      // NativeEventEmitter doesn't implement the `addListener:`/`removeListeners:`
+      // selectors. The call is fire-and-forget (no JS result is awaited), so log and
+      // swallow instead of crashing the whole app — mirrors the sync-path fix in
+      // facebook/react-native#50193 / reactwg new-architecture Discussion #276.
+      // RCTLogError surfaces the exact <class>/<selector> so the real module gap can
+      // be fixed without the process aborting.
+      RCTLogError(
+          @"[TurboModule] void method -[%s %s] threw %@: %@ -- swallowed to avoid SIGABRT on the TurboModule queue.",
+          moduleName,
+          methodName,
+          exception.name,
+          exception.reason);
     } @finally {
       [retainedObjectsForInvocation removeAllObjects];
     }

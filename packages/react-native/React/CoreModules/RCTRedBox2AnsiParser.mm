@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !TARGET_OS_OSX // [macOS] iOS-only RedBox 2.0 / extracted controller (#56640); fork uses inline macOS RCTRedBoxController
+
 #import "RCTRedBox2AnsiParser+Internal.h"
 
 #import <React/RCTDefines.h>
@@ -53,3 +55,5 @@ static UIColor *RCTUIColorFromAnsiColor(const AnsiColor &c)
 @end
 
 #endif
+
+#endif // !TARGET_OS_OSX [macOS]

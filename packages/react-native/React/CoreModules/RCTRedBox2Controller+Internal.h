@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !TARGET_OS_OSX // [macOS] iOS-only RedBox 2.0 / extracted controller (#56640); fork uses inline macOS RCTRedBoxController
+
 #import <React/RCTDefines.h>
 
 #import "RCTRedBox+Internal.h"
@@ -32,3 +34,5 @@ typedef void (^RCTRedBox2ButtonPressHandler)(void);
 @end
 
 #endif
+
+#endif // !TARGET_OS_OSX [macOS]

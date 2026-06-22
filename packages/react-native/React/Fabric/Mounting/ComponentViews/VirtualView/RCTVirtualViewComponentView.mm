@@ -88,20 +88,9 @@ static BOOL CGRectOverlaps(CGRect rect1, CGRect rect2)
     }
   }
 
-  // If disabled, `_renderState` will always be `RCTVirtualViewRenderStateUnknown`.
-  if (ReactNativeFeatureFlags::enableVirtualViewRenderState()) {
-    switch (newViewProps.renderState) {
-      case 1:
-        _renderState = RCTVirtualViewRenderStateRendered;
-        break;
-      case 2:
-        _renderState = RCTVirtualViewRenderStateNone;
-        break;
-      default:
-        _renderState = RCTVirtualViewRenderStateUnknown;
-        break;
-    }
-  }
+  // [macOS] react-native 0.85 removed the enableVirtualViewRenderState feature flag
+  // (and the renderState prop), so `_renderState` always stays
+  // RCTVirtualViewRenderStateUnknown — matching the previous "disabled" behavior.
 
   [super updateProps:props oldProps:oldProps];
 }
@@ -298,19 +287,9 @@ static BOOL sIsAccessibilityUsed = NO;
     if (prerender) {
       newMode = RCTVirtualViewModePrerender;
     } else {
-      const CGFloat hysteresisRatio = ReactNativeFeatureFlags::virtualViewHysteresisRatio();
-      if (_mode.has_value() && hysteresisRatio > 0) {
-        thresholdRect = CGRectInset(thresholdRect, -visibleWidth * hysteresisRatio, -visibleHeight * hysteresisRatio);
-        if (CGRectOverlaps(targetRect, thresholdRect)) {
-          newMode = _mode.value();
-        } else {
-          newMode = RCTVirtualViewModeHidden;
-          thresholdRect = CGRectZero;
-        }
-      } else {
-        newMode = RCTVirtualViewModeHidden;
-        thresholdRect = CGRectZero;
-      }
+      // [macOS] react-native 0.85 removed the virtualViewHysteresisRatio feature flag.
+      newMode = RCTVirtualViewModeHidden;
+      thresholdRect = CGRectZero;
     }
   }
 

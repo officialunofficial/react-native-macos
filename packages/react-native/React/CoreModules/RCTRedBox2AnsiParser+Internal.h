@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#import <UIKit/UIKit.h>
+#if !TARGET_OS_OSX // [macOS] iOS-only RedBox 2.0 / extracted controller (#56640); fork uses inline macOS RCTRedBoxController
+
+#import <React/RCTUIKit.h> // [macOS]
 
 /**
  * Parses ANSI escape sequences in text and produces an NSAttributedString
@@ -20,3 +22,5 @@
                                            baseColor:(UIColor *)color;
 
 @end
+
+#endif // !TARGET_OS_OSX [macOS]

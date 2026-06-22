@@ -7,6 +7,8 @@
 
 #import "RCTFrameTimingsObserver.h"
 
+#if !TARGET_OS_OSX // [macOS] frame-timings observer is iOS-only (CADisplayLink / UIScene screenshots)
+
 #import <UIKit/UIKit.h>
 
 #import <mach/thread_act.h>
@@ -296,3 +298,26 @@ struct FrameData {
 }
 
 @end
+
+#else // [macOS] no-op stub so RCTFrameTimingsObserver exists on macOS
+
+@implementation RCTFrameTimingsObserver
+
+#ifdef __cplusplus
+- (instancetype)initWithScreenshotsEnabled:(BOOL)screenshotsEnabled callback:(RCTFrameTimingCallback)callback
+{
+  return [super init];
+}
+#endif
+
+- (void)start
+{
+}
+
+- (void)stop
+{
+}
+
+@end
+
+#endif // !TARGET_OS_OSX [macOS]
