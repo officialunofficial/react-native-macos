@@ -71,6 +71,16 @@ function expandDirectoriesIntoFiles(
         onlyFiles: true,
         absolute: true,
         cwd: file,
+        // [macOS] Exclude node_modules so that scanning a library's own
+        // jsSrcsDir (e.g. "." for RNTester, which self-depends on
+        // react-native-macos for CLI resolution, see #2529) doesn't also
+        // recursively pick up and duplicate every Native*.js spec file
+        // belonging to react-native core / other dependencies, which are
+        // already discovered and codegen'd separately per-library. Without
+        // this, duplicate ObjC/C++ symbols are emitted across the app's
+        // ReactCodegen pod and e.g. React-RCTFBReactNativeSpec, causing
+        // linker "duplicate symbol" errors.
+        ignore: ['**/node_modules/**'],
       });
     })
     .filter(element => filterJSFile(element, platform, exclude));

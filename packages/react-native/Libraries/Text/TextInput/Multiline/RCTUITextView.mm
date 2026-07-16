@@ -275,6 +275,11 @@ static RCTPlatformColor *defaultPlaceholderColor(void) // [macOS]
   [super setFocusRingType:self.focusRingType];
   [self setKeyboardFocusRingNeedsDisplayInRect:self.bounds];
 }
+
+- (BOOL)enableFocusRing
+{
+  return _enableFocusRing;
+}
 #endif // macOS]
 
 - (void)setDefaultTextAttributes:(NSDictionary<NSAttributedStringKey, id> *)defaultTextAttributes
@@ -301,6 +306,7 @@ static RCTPlatformColor *defaultPlaceholderColor(void) // [macOS]
 
 - (void)setDisableKeyboardShortcuts:(BOOL)disableKeyboardShortcuts
 {
+  _disableKeyboardShortcuts = disableKeyboardShortcuts;
 #if TARGET_OS_IOS
   // Initialize the initial values only once
   if (_initialValueLeadingBarButtonGroups == nil) {
@@ -317,7 +323,6 @@ static RCTPlatformColor *defaultPlaceholderColor(void) // [macOS]
     self.inputAssistantItem.leadingBarButtonGroups = _initialValueLeadingBarButtonGroups;
     self.inputAssistantItem.trailingBarButtonGroups = _initialValueTrailingBarButtonGroups;
   }
-  _disableKeyboardShortcuts = disableKeyboardShortcuts;
 #endif
 }
 

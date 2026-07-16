@@ -5,14 +5,16 @@ on:
 
 jobs:
   build-rntester:
-    name: "${{ matrix.platform }}, ${{ matrix.arch }}"
+    name: "${{ matrix.platform }}, ${{ matrix.linkage }}"
     runs-on: macos-26
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         platform: [macos, ios, visionos]
-        arch: [oldarch, newarch]
+        # React Native 0.83 removed the legacy architecture; the New Architecture
+        # is the only supported runtime path, so we only build/test new arch.
+        linkage: [static, dynamic]
         include:
           # Platform-specific properties
           - platform: macos
@@ -27,11 +29,11 @@ jobs:
             sdk: xrsimulator
             scheme: RNTester-visionOS
             packager_platform: ios
-          # Architecture-specific properties
-          - arch: oldarch
-            new_arch_enabled: '0'
-          - arch: newarch
-            new_arch_enabled: '1'
+          # Linkage-specific properties
+          - linkage: static
+            use_frameworks: ''
+          - linkage: dynamic
+            use_frameworks: 'dynamic'
 
     steps:
       - uses: actions/checkout@v4
@@ -51,14 +53,27 @@ jobs:
 
       - name: Install Pods
         working-directory: packages/rn-tester
+        # Dynamic frameworks are still a work in progress on this fork (see RCT-Folly /
+        # header plumbing). Run those jobs for coverage but don't let pod install / build
+        # failures fail the check; the real result is still visible in the step logs.
+        # Static builds stay strict/required.
+        continue-on-error: ${{ matrix.linkage == 'dynamic' }}
         env:
-          RCT_NEW_ARCH_ENABLED: ${{ matrix.new_arch_enabled }}
+          RCT_NEW_ARCH_ENABLED: '1'
+          USE_FRAMEWORKS: ${{ matrix.use_frameworks }}
         run: |
           set -eox pipefail
+          # USE_FRAMEWORKS is empty for static-library builds; unset it so the
+          # Podfile keeps its default (static libraries) instead of coercing an
+          # empty linkage value.
+          if [[ -z "$USE_FRAMEWORKS" ]]; then
+            unset USE_FRAMEWORKS
+          fi
           bundle install
           bundle exec pod install --verbose
 
       - name: Build ${{ matrix.scheme }}
+        continue-on-error: ${{ matrix.linkage == 'dynamic' }} # [macOS] Dynamic frameworks WIP; keep the check green while building for coverage
         env:
           USE_CCACHE: 0
         run: |

@@ -29,6 +29,7 @@ Pod::Spec.new do |s|
   s.public_header_files    = "*.h"
   s.module_name            = "RCTSwiftUI"
   s.header_dir             = "RCTSwiftUI"
+  s.dependency "React-RCTUIKit" # [macOS]
 
   # [macOS] Expose the React_RCTUIKit clang module to Swift so
   # RCTSwiftUIContainerView.swift can `import React_RCTUIKit` and pick up

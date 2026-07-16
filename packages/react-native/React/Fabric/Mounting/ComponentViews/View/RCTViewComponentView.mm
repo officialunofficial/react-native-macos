@@ -792,11 +792,6 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   _isJSResponder = NO;
   _removeClippedSubviews = NO;
   _reactSubviews = [NSMutableArray new];
-#if TARGET_OS_OSX // [macOS
-    _allowsVibrancy = NO;
-    self.acceptsFirstMouse = NO;
-    self.mouseDownCanMoveWindow = YES;
-#endif // macOS]
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props
@@ -1081,13 +1076,13 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     return self;
   }
 
-  UIView *effectiveContentView = self;
+  RCTPlatformView *effectiveContentView = self; // [macOS]
 
   if (self.styleNeedsSwiftUIContainer) {
     if (_swiftUIWrapper == nullptr) {
       _swiftUIWrapper = [RCTSwiftUIContainerViewWrapper new];
-      UIView *swiftUIContentView = [[UIView alloc] init];
-      for (UIView *subview = nullptr in self.subviews) {
+      RCTPlatformView *swiftUIContentView = [[RCTPlatformView alloc] init]; // [macOS]
+      for (RCTPlatformView *subview = nullptr in self.subviews) { // [macOS]
         [swiftUIContentView addSubview:subview];
       }
       swiftUIContentView.clipsToBounds = self.clipsToBounds;
@@ -1104,8 +1099,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     effectiveContentView = _swiftUIWrapper.contentView;
   } else {
     if (_swiftUIWrapper != nullptr) {
-      UIView *swiftUIContentView = _swiftUIWrapper.contentView;
-      for (UIView *subview = nullptr in swiftUIContentView.subviews) {
+      RCTPlatformView *swiftUIContentView = _swiftUIWrapper.contentView; // [macOS]
+      for (RCTPlatformView *subview = nullptr in swiftUIContentView.subviews) { // [macOS]
         [self addSubview:subview];
       }
       self.clipsToBounds = swiftUIContentView.clipsToBounds;
@@ -1944,7 +1939,13 @@ static NSString *RCTRecursiveAccessibilityLabel(RCTUIView *view) // [macOS]
   // correct AppKit equivalent is `makeFirstResponder:nil`, which clears
   // the current first responder. Mirrors the working pattern at
   // RCTTextInputComponentView.mm:995-997.
-  [[self window] makeFirstResponder:nil];
+  //
+  // Guard on firstResponder == self so we don't steal focus away from an
+  // unrelated view that became first responder after this one blurred
+  // (upstream d64dcd3c1b7).
+  if ([[self window] firstResponder] == self) {
+    [[self window] makeFirstResponder:nil];
+  }
 }
 
 - (BOOL)needsPanelToBecomeKey
