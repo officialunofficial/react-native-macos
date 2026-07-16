@@ -98,7 +98,7 @@ const AccessibilityInfo = {
    * See https://reactnative.dev/docs/accessibilityinfo#isBoldTextEnabled
    */
   isBoldTextEnabled(): Promise<boolean> {
-    if (Platform.OS === 'android' || Platform.OS === 'macos' /* [macOS] */) {
+    if (Platform.OS === 'android') {
       return Promise.resolve(false);
     } else {
       return new Promise((resolve, reject) => {
@@ -331,7 +331,7 @@ const AccessibilityInfo = {
    * See https://reactnative.dev/docs/accessibilityinfo#isReduceTransparencyEnabled
    */
   isReduceTransparencyEnabled(): Promise<boolean> {
-    if (Platform.OS === 'android' || Platform.OS === 'macos' /* [macOS] */) {
+    if (Platform.OS === 'android') {
       return Promise.resolve(false);
     } else {
       return new Promise((resolve, reject) => {

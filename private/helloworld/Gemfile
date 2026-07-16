@@ -12,7 +12,6 @@ gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
-gem 'nkf'
 gem 'base64'
 
 gem 'ffi',  '>= 1.17.2'
