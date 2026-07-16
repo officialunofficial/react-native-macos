@@ -2523,7 +2523,6 @@ enum MouseEventType {
   }
 }
 
-#if !TARGET_OS_OSX // [macOS] macOS provides its own focus/blur implementation in the TARGET_OS_OSX block above
 - (BOOL)canBecomeFirstResponder
 {
   return YES;
