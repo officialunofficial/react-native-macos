@@ -63,14 +63,22 @@ async function buildFile(file, silent) {
 
   fs.mkdirSync(path.dirname(destPath), {recursive: true});
 
-  if (micromatch.isMatch(file, IGNORE_PATTERN)) {
+  // micromatch's `**` does not traverse dot-directories (e.g. a checkout
+  // living under `.claude/worktrees/...`) unless `dot: true` is set, so
+  // matching against the absolute `file` path can silently fail to match
+  // any pattern when the repo itself is nested under a dotfile/dotdir.
+  // Match against the path relative to the package dir instead, which is
+  // never affected by where the repo happens to be checked out.
+  const relativeFile = path.relative(PACKAGE_DIR, file);
+
+  if (micromatch.isMatch(relativeFile, IGNORE_PATTERN)) {
     silent ||
       process.stdout.write(
         styleText('dim', '  \u2022 ') +
           path.relative(PACKAGE_DIR, file) +
           ' (ignore)\n',
       );
-  } else if (!micromatch.isMatch(file, JS_FILES_PATTERN)) {
+  } else if (!micromatch.isMatch(relativeFile, JS_FILES_PATTERN)) {
     fs.createReadStream(file).pipe(fs.createWriteStream(destPath));
     silent ||
       process.stdout.write(
