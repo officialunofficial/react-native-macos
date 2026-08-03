@@ -35,9 +35,6 @@ static NSString *sRCTDevLoadingViewWindowIdentifier = @"RCTDevLoadingViewWindow"
   RCTPlatformWindow *_window; // [macOS]
   RCTUILabel *_label; // [macOS]
   RCTUIView *_container; // [macOS]
-#if !TARGET_OS_OSX // [macOS]
-  UIButton *_dismissButton;
-#endif // [macOS]
   NSDate *_showDate;
   BOOL _hiding;
   dispatch_block_t _initialMessageBlock;
@@ -56,29 +53,8 @@ RCT_EXPORT_MODULE()
                                              selector:@selector(hide)
                                                  name:RCTJavaScriptDidFailToLoadNotification
                                                object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(hide)
-                                                 name:@"RCTInstanceDidLoadBundle"
-                                               object:nil];
   }
   return self;
-}
-
-- (void)dealloc
-{
-  [self clearInitialMessageDelay];
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  RCTPlatformWindow *window = _window; // [macOS]
-  _window = nil;
-  if (window) {
-    RCTExecuteOnMainQueue(^{
-#if !TARGET_OS_OSX // [macOS]
-      window.hidden = YES;
-#else // [macOS
-      [window orderOut:nil];
-#endif // macOS]
-    });
-  }
 }
 
 + (void)setEnabled:(BOOL)enabled
@@ -112,16 +88,7 @@ RCT_EXPORT_MODULE()
       dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), self->_initialMessageBlock);
 }
 
-- (void)hideBannerAfter:(CGFloat)delay
-{
-  // Cancel previous hide call after the delay.
-  [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hide) object:nil];
-  // Set new hide call after a delay.
-  [self performSelector:@selector(hide) withObject:nil afterDelay:delay];
-}
-
 - (void)showMessage:(NSString *)message color:(RCTPlatformColor *)color backgroundColor:(RCTPlatformColor *)backgroundColor // [macOS]
-      dismissButton:(BOOL)dismissButton
 {
   if (!RCTDevLoadingViewGetEnabled() || _hiding) {
     return;
@@ -149,95 +116,46 @@ RCT_EXPORT_MODULE()
     self->_showDate = [NSDate date];
 
 #if !TARGET_OS_OSX // [macOS]
-    if (self->_label == nullptr) {
-      self->_label = [[UILabel alloc] init];
-      self->_label.translatesAutoresizingMaskIntoConstraints = NO;
-      self->_label.font = [UIFont monospacedDigitSystemFontOfSize:12.0 weight:UIFontWeightRegular];
-      self->_label.textAlignment = NSTextAlignmentCenter;
-      [self->_container addSubview:self->_label];
-      self->_label.numberOfLines = 0;
-    }
+    UIWindow *mainWindow = RCTKeyWindow();
+    self->_window = [[UIWindow alloc] initWithWindowScene:mainWindow.windowScene];
+    self->_window.windowLevel = UIWindowLevelStatusBar + 1;
+    self->_window.rootViewController = [UIViewController new];
+
+    self->_container = [[UIView alloc] init];
+    self->_container.backgroundColor = backgroundColor;
+    self->_container.translatesAutoresizingMaskIntoConstraints = NO;
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hide)];
+    [self->_container addGestureRecognizer:tapGesture];
+    self->_container.userInteractionEnabled = YES;
+
+    self->_label = [[UILabel alloc] init];
+    self->_label.translatesAutoresizingMaskIntoConstraints = NO;
+    self->_label.font = [UIFont monospacedDigitSystemFontOfSize:12.0 weight:UIFontWeightRegular];
+    self->_label.textAlignment = NSTextAlignmentCenter;
     self->_label.textColor = color;
     self->_label.text = message;
 
-    if (self->_container == nullptr) {
-      self->_container = [[UIView alloc] init];
-      self->_container.translatesAutoresizingMaskIntoConstraints = NO;
-      UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hide)];
-      [self->_container addGestureRecognizer:tapGesture];
-      self->_container.userInteractionEnabled = YES;
-      [self->_container addSubview:self->_label];
-    }
-    self->_container.backgroundColor = backgroundColor;
-
-    // Handle button creation/removal dynamically based on dismissButton parameter
-    if (dismissButton && self->_dismissButton == nullptr) {
-      CGFloat hue = 0.0;
-      CGFloat saturation = 0.0;
-      CGFloat brightness = 0.0;
-      CGFloat alpha = 0.0;
-      [backgroundColor getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha];
-      UIColor *darkerBackground = [UIColor colorWithHue:hue
-                                             saturation:saturation
-                                             brightness:brightness * 0.7
-                                                  alpha:1.0];
-
-      UIButtonConfiguration *buttonConfig = [UIButtonConfiguration plainButtonConfiguration];
-      buttonConfig.attributedTitle = [[NSAttributedString alloc]
-          initWithString:@"Dismiss ✕"
-              attributes:@{NSFontAttributeName : [UIFont systemFontOfSize:11.0 weight:UIFontWeightRegular]}];
-      buttonConfig.contentInsets = NSDirectionalEdgeInsetsMake(6, 12, 6, 12);
-      buttonConfig.background.backgroundColor = darkerBackground;
-      buttonConfig.background.cornerRadius = 10;
-      buttonConfig.baseForegroundColor = color;
-
-      // Button is a visual cue to tap anywhere on the banner to dismiss so no separate action is needed
-      self->_dismissButton = [UIButton buttonWithConfiguration:buttonConfig primaryAction:nil];
-      self->_dismissButton.userInteractionEnabled = NO;
-      self->_dismissButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-      // Prevent button from being compressed - force label to wrap instead
-      [self->_dismissButton setContentCompressionResistancePriority:UILayoutPriorityRequired
-                                                            forAxis:UILayoutConstraintAxisHorizontal];
-      [self->_dismissButton setContentHuggingPriority:UILayoutPriorityRequired
-                                              forAxis:UILayoutConstraintAxisHorizontal];
-
-      [self->_container addSubview:self->_dismissButton];
-    } else if (!dismissButton && self->_dismissButton != nullptr) {
-      [self->_dismissButton removeFromSuperview];
-      self->_dismissButton = nullptr;
-    }
-
-    UIWindow *mainWindow = RCTKeyWindow();
-    if (self->_window == nullptr) {
-      UIWindowScene *windowScene = mainWindow.windowScene;
-      if (windowScene != nil) {
-        self->_window = [[UIWindow alloc] initWithWindowScene:windowScene];
-      } else {
-        self->_window = [[UIWindow alloc] init];
-      }
-#if !TARGET_OS_TV
-      self->_window.windowLevel = UIWindowLevelStatusBar + 1;
-#endif
-      self->_window.rootViewController = [UIViewController new];
-      [self->_window.rootViewController.view addSubview:self->_container];
-    }
+    [self->_window.rootViewController.view addSubview:self->_container];
+    [self->_container addSubview:self->_label];
 
     CGFloat topSafeAreaHeight = mainWindow.safeAreaInsets.top;
+    CGFloat height = topSafeAreaHeight + 25;
+    self->_window.frame = CGRectMake(0, 0, mainWindow.frame.size.width, height);
+
     self->_window.hidden = NO;
 
     [self->_window layoutIfNeeded];
 
-    NSMutableArray *constraints = [NSMutableArray arrayWithArray:@[
+    [NSLayoutConstraint activateConstraints:@[
       // Container constraints
       [self->_container.topAnchor constraintEqualToAnchor:self->_window.rootViewController.view.topAnchor],
       [self->_container.leadingAnchor constraintEqualToAnchor:self->_window.rootViewController.view.leadingAnchor],
       [self->_container.trailingAnchor constraintEqualToAnchor:self->_window.rootViewController.view.trailingAnchor],
+      [self->_container.heightAnchor constraintEqualToConstant:height],
 
       // Label constraints
-      [self->_label.topAnchor constraintEqualToAnchor:self->_container.topAnchor constant:topSafeAreaHeight + 8],
-      [self->_label.leadingAnchor constraintEqualToAnchor:self->_container.leadingAnchor constant:10],
-      [self->_label.bottomAnchor constraintEqualToAnchor:self->_container.bottomAnchor constant:-8],
+      [self->_label.centerXAnchor constraintEqualToAnchor:self->_container.centerXAnchor],
+      [self->_label.bottomAnchor constraintEqualToAnchor:self->_container.bottomAnchor constant:-5],
     ]];
 #else // [macOS
     if (!self->_label) {
@@ -252,71 +170,59 @@ RCT_EXPORT_MODULE()
     if (!self->_container) {
       self->_container = [[RCTUIView alloc] init]; // [macOS]
       self->_container.translatesAutoresizingMaskIntoConstraints = NO;
+      self->_container.wantsLayer = YES;
+      self->_container.layer.masksToBounds = YES;
       [self->_container addSubview:self->_label];
     }
     self->_container.backgroundColor = backgroundColor;
-    
+
     if (!self->_window) {
       self->_window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 375, 20)
-                                                styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskFullSizeContentView
+                                                styleMask:NSWindowStyleMaskBorderless
                                                   backing:NSBackingStoreBuffered
                                                     defer:YES];
+      self->_window.backgroundColor = [NSColor clearColor];
+      self->_window.opaque = NO;
       [self->_window setIdentifier:sRCTDevLoadingViewWindowIdentifier];
       [self->_window.contentView addSubview:self->_container];
+      self->_container.layer.cornerRadius = NSHeight(self->_window.contentView.bounds) / 2;
+      self->_container.layer.cornerCurve = kCACornerCurveContinuous;
     }
-    
+
     // Container constraints
     [NSLayoutConstraint activateConstraints:@[
       [self->_container.topAnchor constraintEqualToAnchor:self->_window.contentView.topAnchor],
       [self->_container.leadingAnchor constraintEqualToAnchor:self->_window.contentView.leadingAnchor],
       [self->_container.trailingAnchor constraintEqualToAnchor:self->_window.contentView.trailingAnchor],
       [self->_container.bottomAnchor constraintEqualToAnchor:self->_window.contentView.bottomAnchor],
-      
+
       // Label constraints
       [self->_label.centerXAnchor constraintEqualToAnchor:self->_container.centerXAnchor],
       [self->_label.centerYAnchor constraintEqualToAnchor:self->_container.centerYAnchor],
       [self->_label.leadingAnchor constraintGreaterThanOrEqualToAnchor:self->_container.leadingAnchor constant:10],
       [self->_label.trailingAnchor constraintLessThanOrEqualToAnchor:self->_container.trailingAnchor constant:-10],
     ]];
-    
-    if (![[RCTKeyWindow() sheets] doesContain:self->_window]) {
-      [RCTKeyWindow() beginSheet:self->_window completionHandler:^(NSModalResponse returnCode) {
-        [self->_window orderOut:self];
-      }];
+
+    NSWindow *parentWindow = RCTKeyWindow();
+    if (![[parentWindow childWindows] doesContain:self->_window]) {
+      NSRect parentFrame = parentWindow.frame;
+      NSRect loadingFrame = self->_window.frame;
+      [self->_window setFrameOrigin:NSMakePoint(
+                                        NSMidX(parentFrame) - NSWidth(loadingFrame) / 2,
+                                        NSMidY(parentFrame) - NSHeight(loadingFrame) / 2)];
+      [parentWindow addChildWindow:self->_window ordered:NSWindowAbove];
     }
 #endif // macOS]
-
-#if !TARGET_OS_OSX // [macOS]
-    // Add button-specific constraints if button exists
-    if (self->_dismissButton != nullptr) {
-      [constraints addObjectsFromArray:@[
-        [self->_dismissButton.trailingAnchor constraintEqualToAnchor:self->_container.trailingAnchor constant:-10],
-        [self->_dismissButton.centerYAnchor constraintEqualToAnchor:self->_label.centerYAnchor],
-        [self->_dismissButton.heightAnchor constraintEqualToConstant:22],
-        [self->_label.trailingAnchor constraintEqualToAnchor:self->_dismissButton.leadingAnchor constant:-10],
-      ]];
-    } else {
-      [constraints addObject:[self->_label.trailingAnchor constraintEqualToAnchor:self->_container.trailingAnchor
-                                                                         constant:-10]];
-    }
-
-    [NSLayoutConstraint activateConstraints:constraints];
-
-    [self->_window layoutIfNeeded];
-    self->_window.frame = CGRectMake(0, 0, mainWindow.frame.size.width, self->_container.frame.size.height);
-#endif // [macOS]
   });
 }
 
 RCT_EXPORT_METHOD(
     showMessage : (NSString *)message withColor : (NSNumber *__nonnull)color withBackgroundColor : (NSNumber *__nonnull)
-        backgroundColor withDismissButton : (NSNumber *)dismissButton)
+        backgroundColor)
 {
-  [self showMessage:message
-                color:[RCTConvert UIColor:color]
-      backgroundColor:[RCTConvert UIColor:backgroundColor]
-        dismissButton:[dismissButton boolValue]];
+  [self showMessage:message color:[RCTConvert UIColor:color] backgroundColor:[RCTConvert UIColor:backgroundColor]];
 }
+
 RCT_EXPORT_METHOD(hide)
 {
   if (!RCTDevLoadingViewGetEnabled()) {
@@ -343,15 +249,13 @@ RCT_EXPORT_METHOD(hide)
           self->_window.frame = windowFrame;
           self->_window.hidden = YES;
           self->_window = nil;
-          self->_container = nil;
-          self->_label = nil;
-          self->_dismissButton = nil;
           self->_hiding = false;
         }];
 #else // [macOS]
-    for (NSWindow *window in [RCTKeyWindow() sheets]) {
+    for (NSWindow *window in NSApp.windows) {
       if ([[window identifier] isEqualToString:sRCTDevLoadingViewWindowIdentifier]) {
-        [RCTKeyWindow() endSheet:window];
+        [window.parentWindow removeChildWindow:window];
+        [window orderOut:self];
       }
     }
     self->_window = nil;
@@ -378,7 +282,7 @@ RCT_EXPORT_METHOD(hide)
     backgroundColor = [RCTPlatformColor colorWithHue:0 saturation:0 brightness:0.98 alpha:1]; // [macOS]
   }
 
-  [self showMessage:message color:color backgroundColor:backgroundColor dismissButton:false];
+  [self showMessage:message color:color backgroundColor:backgroundColor];
 }
 
 - (void)showOfflineMessage
@@ -395,7 +299,7 @@ RCT_EXPORT_METHOD(hide)
     }
 
     NSString *message = [NSString stringWithFormat:@"Connect to %@ to develop JavaScript.", RCT_PACKAGER_NAME];
-    [weakSelf showMessage:message color:color backgroundColor:backgroundColor dismissButton:false];
+    [weakSelf showMessage:message color:color backgroundColor:backgroundColor];
   });
   // macOS]
 }
@@ -456,16 +360,10 @@ RCT_EXPORT_METHOD(hide)
 + (void)setEnabled:(BOOL)enabled
 {
 }
-- (void)showMessage:(NSString *)message
-              color:(RCTPlatformColor *)color // [macOS]
-    backgroundColor:(RCTPlatformColor *)backgroundColor // [macOS]
-      dismissButton:(BOOL)dismissButton
+- (void)showMessage:(NSString *)message color:(RCTPlatformColor *)color backgroundColor:(RCTPlatformColor *)backgroundColor // [macOS] RCTPlatformColor
 {
 }
-- (void)showMessage:(NSString *)message
-              withColor:(NSNumber *)color
-    withBackgroundColor:(NSNumber *)backgroundColor
-      withDismissButton:(NSNumber *)dismissButton
+- (void)showMessage:(NSString *)message withColor:(NSNumber *)color withBackgroundColor:(NSNumber *)backgroundColor
 {
 }
 - (void)showWithURL:(NSURL *)URL
