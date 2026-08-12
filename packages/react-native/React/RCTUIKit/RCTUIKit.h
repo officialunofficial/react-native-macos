@@ -16,6 +16,7 @@
 #import <React/RCTUIView.h>
 #import <React/RCTUIScrollView.h>
 #import <React/RCTUISlider.h>
+#import <React/RCTUITableView.h>
 #import <React/RCTUILabel.h>
 #import <React/RCTUISwitch.h>
 #import <React/RCTUIActivityIndicatorView.h>
