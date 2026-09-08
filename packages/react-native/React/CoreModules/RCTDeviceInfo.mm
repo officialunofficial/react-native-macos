@@ -40,6 +40,28 @@ using namespace facebook::react;
 
 static NSString *const kFrameKeyPath = @"frame";
 
+#if TARGET_OS_OSX // [macOS]
+// Resolves the window RN should measure: the key window, else the app's
+// main window, else the first visible window. Only a truly windowless app
+// falls back to the screen.
+static NSWindow *RCTAppWindow(void)
+{
+  NSWindow *keyWindow = RCTKeyWindow();
+  if (keyWindow) {
+    return keyWindow;
+  }
+  if (NSApp.mainWindow) {
+    return NSApp.mainWindow;
+  }
+  for (NSWindow *window in NSApp.windows) {
+    if (window.isVisible) {
+      return window;
+    }
+  }
+  return nil;
+}
+#endif // [macOS]
+
 @synthesize moduleRegistry = _moduleRegistry;
 
 RCT_EXPORT_MODULE()
@@ -47,11 +69,41 @@ RCT_EXPORT_MODULE()
 - (instancetype)init
 {
   if (self = [super init]) {
+#if TARGET_OS_OSX // [macOS]
+    _applicationWindow = RCTAppWindow();
+    if (_applicationWindow) {
+      [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
+    } else {
+      // No window exists yet at launch; attach once one becomes key.
+      [[NSNotificationCenter defaultCenter] addObserver:self
+                                               selector:@selector(_attachToKeyWindow:)
+                                                   name:NSWindowDidBecomeKeyNotification
+                                                 object:nil];
+    }
+#else // [macOS]
     _applicationWindow = RCTKeyWindow();
     [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
+#endif // [macOS]
   }
   return self;
 }
+
+#if TARGET_OS_OSX // [macOS]
+- (void)_attachToKeyWindow:(NSNotification *)notification
+{
+  if (_applicationWindow) {
+    return;
+  }
+  NSWindow *window = RCTAppWindow();
+  if (!window) {
+    return;
+  }
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
+  _applicationWindow = window;
+  [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
+  [self interfaceFrameDidChange];
+}
+#endif // [macOS]
 
 - (instancetype)initWithDimensionsProvider:(NSDictionary * (^)(void))dimensionsProvider
 {
@@ -163,6 +215,10 @@ RCT_EXPORT_MODULE()
 
   [_applicationWindow removeObserver:self forKeyPath:kFrameKeyPath];
 
+#if TARGET_OS_OSX // [macOS]
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
+#endif // [macOS]
+
 #if TARGET_OS_IOS
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
 #endif
@@ -204,7 +260,7 @@ static NSDictionary *RCTExportedDimensions(CGFloat fontScale)
 #else // [macOS
   NSScreen *mainScreen = NSScreen.mainScreen;
   CGSize screenSize = mainScreen.frame.size;
-  NSWindow *mainWindow = RCTKeyWindow();
+  NSWindow *mainWindow = RCTAppWindow(); // [macOS]
 #endif // macOS]
 
   // We fallback to screen size if a key window is not found.
