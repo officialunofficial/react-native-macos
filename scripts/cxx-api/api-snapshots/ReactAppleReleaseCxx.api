@@ -7270,6 +7270,7 @@ class facebook::react::ShadowNodeFamily : public facebook::jsi::NativeState {
   public facebook::react::SharedEventEmitter getEventEmitter() const;
   public facebook::react::SurfaceId getSurfaceId() const;
   public facebook::react::Tag getTag() const;
+  public mutable std::mutex nativePropsMutex;
   public facebook::react::_instance_handle::InstanceHandle::Shared getInstanceHandle() const;
   public facebook::react::_shadow_node_family::AncestorList getAncestors(const facebook::react::ShadowNode& ancestorShadowNode) const;
   public std::shared_ptr<const facebook::react::State> getMostRecentState() const;
