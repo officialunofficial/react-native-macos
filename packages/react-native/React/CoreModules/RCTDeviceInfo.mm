@@ -70,16 +70,15 @@ RCT_EXPORT_MODULE()
 {
   if (self = [super init]) {
 #if TARGET_OS_OSX // [macOS]
-    _applicationWindow = RCTAppWindow();
-    if (_applicationWindow) {
-      [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
-    } else {
-      // No window exists yet at launch; attach once one becomes key.
-      [[NSNotificationCenter defaultCenter] addObserver:self
-                                               selector:@selector(_attachToKeyWindow:)
-                                                   name:NSWindowDidBecomeKeyNotification
-                                                 object:nil];
-    }
+    [self _observeWindow:RCTAppWindow()];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(_windowDidBecomeKey:)
+                                                 name:NSWindowDidBecomeKeyNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(_windowWillClose:)
+                                                 name:NSWindowWillCloseNotification
+                                               object:nil];
 #else // [macOS]
     _applicationWindow = RCTKeyWindow();
     [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
@@ -89,19 +88,29 @@ RCT_EXPORT_MODULE()
 }
 
 #if TARGET_OS_OSX // [macOS]
-- (void)_attachToKeyWindow:(NSNotification *)notification
+// The frame KVO follows the window that `RCTExportedDimensions` measures.
+// One window is observed at a time; a window must be released before it
+// deallocates, or KVO logs an error.
+- (void)_observeWindow:(NSWindow *)window
 {
-  if (_applicationWindow) {
+  if (window == _applicationWindow || _invalidated) {
     return;
   }
-  NSWindow *window = RCTAppWindow();
-  if (!window) {
-    return;
-  }
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
+  [_applicationWindow removeObserver:self forKeyPath:kFrameKeyPath];
   _applicationWindow = window;
   [_applicationWindow addObserver:self forKeyPath:kFrameKeyPath options:NSKeyValueObservingOptionNew context:nil];
+}
+
+- (void)_windowDidBecomeKey:(NSNotification *)notification
+{
   [self interfaceFrameDidChange];
+}
+
+- (void)_windowWillClose:(NSNotification *)notification
+{
+  if (notification.object == _applicationWindow) {
+    [self _observeWindow:nil];
+  }
 }
 #endif // [macOS]
 
@@ -217,6 +226,7 @@ RCT_EXPORT_MODULE()
 
 #if TARGET_OS_OSX // [macOS]
   [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowWillCloseNotification object:nil];
 #endif // [macOS]
 
 #if TARGET_OS_IOS
@@ -320,6 +330,7 @@ static NSDictionary *RCTExportedDimensions(CGFloat fontScale)
   CGFloat fontScale = accessibilityManager ? accessibilityManager.multiplier : 1.0;
 #else // [macOS
   CGFloat fontScale = 1.0;
+  [self _observeWindow:RCTAppWindow()];
 #endif // macOS]
 
   return RCTExportedDimensions(fontScale);
