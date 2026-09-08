@@ -103,7 +103,12 @@ RCT_EXPORT_MODULE()
 
 - (void)_windowDidBecomeKey:(NSNotification *)notification
 {
-  [self interfaceFrameDidChange];
+  [self _observeWindow:notification.object];
+  // Before `initialize` there is no module registry to publish through;
+  // `initialize` reads the current dimensions itself.
+  if (_moduleRegistry) {
+    [self interfaceFrameDidChange];
+  }
 }
 
 - (void)_windowWillClose:(NSNotification *)notification
