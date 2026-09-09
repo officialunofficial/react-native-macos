@@ -29,6 +29,10 @@
   NSRunLoop *_runLoop;
   NSMutableArray<NSRunLoopMode> *_modes;
   os_unfair_lock _lock; // OS_UNFAIR_LOCK_INIT == 0
+  BOOL _paused;
+  // Host times of the last vsync callback, guarded by _lock. Zero until the first frame.
+  uint64_t _frameHostTime;
+  uint64_t _targetHostTime;
 }
 
 + (RCTPlatformDisplayLink *)displayLinkWithTarget:(id)target selector:(SEL)sel
@@ -39,13 +43,21 @@
   return displayLink;
 }
 
-static CVReturn RCTPlatformDisplayLinkCallBack(__unused CVDisplayLinkRef displayLink, __unused const CVTimeStamp* now, __unused const CVTimeStamp* outputTime, __unused CVOptionFlags flagsIn, __unused CVOptionFlags* flagsOut, void* displayLinkContext)
+static NSTimeInterval RCTPlatformDisplayLinkSeconds(uint64_t hostTime)
+{
+  return (NSTimeInterval)hostTime / (NSTimeInterval)CVGetHostClockFrequency();
+}
+
+static CVReturn RCTPlatformDisplayLinkCallBack(__unused CVDisplayLinkRef displayLink, const CVTimeStamp* now, const CVTimeStamp* outputTime, __unused CVOptionFlags flagsIn, __unused CVOptionFlags* flagsOut, void* displayLinkContext)
 {
   @autoreleasepool {
     RCTPlatformDisplayLink *rctDisplayLink = (__bridge RCTPlatformDisplayLink*)displayLinkContext;
 
     // Lock and check for invalidation prior to calling out to the runloop
     os_unfair_lock_lock(&rctDisplayLink->_lock);
+    uint64_t nowHostTime = (now->flags & kCVTimeStampHostTimeValid) ? now->hostTime : CVGetCurrentHostTime();
+    rctDisplayLink->_frameHostTime = nowHostTime;
+    rctDisplayLink->_targetHostTime = (outputTime->flags & kCVTimeStampHostTimeValid) ? outputTime->hostTime : nowHostTime;
     if (rctDisplayLink->_runLoop != nil) {
       CFRunLoopRef cfRunLoop = [rctDisplayLink->_runLoop getCFRunLoop];
       CFRunLoopPerformBlock(cfRunLoop, (__bridge CFArrayRef)rctDisplayLink->_modes, ^{
@@ -88,7 +100,9 @@ static CVReturn RCTPlatformDisplayLinkCallBack(__unused CVDisplayLinkRef display
   }
   NSCAssert(ret == kCVReturnSuccess, @"Cannot create display link");
   CVDisplayLinkSetOutputCallback(_displayLink, &RCTPlatformDisplayLinkCallBack, (__bridge void *)(self));
-  CVDisplayLinkStart(_displayLink);
+  if (!_paused) {
+    CVDisplayLinkStart(_displayLink);
+  }
 }
 
 - (void)removeFromRunLoop:(__unused NSRunLoop *)runloop forMode:(NSRunLoopMode)mode
@@ -117,6 +131,10 @@ static CVReturn RCTPlatformDisplayLinkCallBack(__unused CVDisplayLinkRef display
 
 - (void)setPaused:(BOOL)paused
 {
+  _paused = paused;
+  if (_displayLink == NULL) {
+    return;
+  }
   if (paused) {
     CVDisplayLinkStop(_displayLink);
   } else {
@@ -126,23 +144,35 @@ static CVReturn RCTPlatformDisplayLinkCallBack(__unused CVDisplayLinkRef display
 
 - (BOOL)isPaused
 {
-  return !CVDisplayLinkIsRunning(_displayLink);
+  return _displayLink != NULL ? !CVDisplayLinkIsRunning(_displayLink) : _paused;
 }
 
+// Like CADisplayLink, these report the last vsync, so they stay valid while
+// paused. CVDisplayLinkGetCurrentTime returns zero on a stopped link.
 - (NSTimeInterval)timestamp
 {
-  CVTimeStamp now;
-  now.version = 0;
-  memset(&now, 0 , sizeof(now));
-  CVDisplayLinkGetCurrentTime(_displayLink, &now);
-  return (NSTimeInterval)now.hostTime / (NSTimeInterval)CVGetHostClockFrequency();
+  os_unfair_lock_lock(&_lock);
+  uint64_t hostTime = _frameHostTime;
+  os_unfair_lock_unlock(&_lock);
+  return RCTPlatformDisplayLinkSeconds(hostTime != 0 ? hostTime : CVGetCurrentHostTime());
+}
+
+- (NSTimeInterval)targetTimestamp
+{
+  os_unfair_lock_lock(&_lock);
+  uint64_t hostTime = _targetHostTime;
+  os_unfair_lock_unlock(&_lock);
+  return hostTime != 0 ? RCTPlatformDisplayLinkSeconds(hostTime) : self.timestamp + self.duration;
 }
 
 - (NSTimeInterval)duration
 {
-  NSTimeInterval duration = 0;
+  NSTimeInterval duration = 1.0 / 60.0;
+  if (_displayLink == NULL) {
+    return duration;
+  }
   const CVTime time = CVDisplayLinkGetNominalOutputVideoRefreshPeriod(_displayLink);
-  if (!(time.flags & kCVTimeIsIndefinite)) {
+  if (!(time.flags & kCVTimeIsIndefinite) && time.timeValue > 0) {
     duration = (NSTimeInterval)time.timeValue / (NSTimeInterval)time.timeScale;
   }
   return duration;
