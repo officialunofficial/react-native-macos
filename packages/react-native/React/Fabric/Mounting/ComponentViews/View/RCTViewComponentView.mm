@@ -839,7 +839,11 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // If view was managed by animated, its props need to align with UIView's properties.
   const auto &props = static_cast<const ViewProps &>(*_props);
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"transform"]) {
+#if !TARGET_OS_OSX // [macOS]
     self.layer.transform = RCTCATransform3DFromTransformMatrix(props.transform);
+#else // [macOS
+    self.transform3D = RCTCATransform3DFromTransformMatrix(props.transform);
+#endif // macOS]
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
     self.layer.opacity = (float)props.opacity;
