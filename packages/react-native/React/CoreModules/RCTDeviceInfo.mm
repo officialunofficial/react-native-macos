@@ -41,20 +41,20 @@ using namespace facebook::react;
 static NSString *const kFrameKeyPath = @"frame";
 
 #if TARGET_OS_OSX // [macOS]
-// Resolves the window RN should measure: the key window, else the app's
-// main window, else the first visible window. Only a truly windowless app
-// falls back to the screen.
+// Resolves the window RN should measure. A sheet or panel can be the key
+// window but never the main window, so main comes first. Only a truly
+// windowless app falls back to the screen.
 static NSWindow *RCTAppWindow(void)
 {
-  NSWindow *keyWindow = RCTKeyWindow();
-  if (keyWindow) {
-    return keyWindow;
-  }
   if (NSApp.mainWindow) {
     return NSApp.mainWindow;
   }
+  NSWindow *keyWindow = RCTKeyWindow();
+  if (keyWindow && ![keyWindow isKindOfClass:[NSPanel class]]) {
+    return keyWindow;
+  }
   for (NSWindow *window in NSApp.windows) {
-    if (window.isVisible) {
+    if (window.isVisible && ![window isKindOfClass:[NSPanel class]]) {
       return window;
     }
   }
